@@ -93,7 +93,7 @@ class Resizer:
         min_image_size=0,
         max_image_area=float("inf"),
         max_aspect_ratio=float("inf"),
-        blurrer=None,
+        cropper=None,
     ):
         if encode_format not in ["jpg", "png", "webp"]:
             raise ValueError(f"Invalid encode format {encode_format}")
@@ -132,9 +132,9 @@ class Resizer:
         self.min_image_size = min_image_size
         self.max_image_area = max_image_area
         self.max_aspect_ratio = max_aspect_ratio
-        self.blurrer = blurrer
+        self.cropper = cropper
 
-    def __call__(self, img_stream, blurring_bbox_list=None):
+    def __call__(self, img_stream, cropping_bbox_list=None):
         """
         input: an image stream, optionally a list of bounding boxes to blur.
         output: img_str, width, height, original_width, original_height, err
@@ -168,11 +168,8 @@ class Resizer:
                     return None, None, None, None, None, "aspect ratio too large"
 
                 # check if resizer was defined during init if needed
-                if blurring_bbox_list is not None and self.blurrer is None:
-                    return None, None, None, None, None, "blurrer not defined"
-
-                # Flag to check if blurring is still needed.
-                maybe_blur_still_needed = True
+                if cropping_bbox_list is not None and self.cropper is None:
+                    return None, None, None, None, None, "cropper not defined"
 
                 # resizing in following conditions
                 if self.resize_mode in (ResizeMode.keep_ratio, ResizeMode.center_crop):
@@ -180,19 +177,18 @@ class Resizer:
                     if not self.resize_only_if_bigger or downscale:
                         interpolation = self.downscale_interpolation if downscale else self.upscale_interpolation
                         img = A.smallest_max_size(img, self.image_size, interpolation=interpolation)
-                        if blurring_bbox_list is not None and self.blurrer is not None:
-                            img = self.blurrer(img=img, bbox_list=blurring_bbox_list)
+                        if cropping_bbox_list is not None and self.cropper is not None:
+                            img = self.cropper(img=img, bbox_list=cropping_bbox_list)
                         if self.resize_mode == ResizeMode.center_crop:
                             img = A.center_crop(img, self.image_size, self.image_size)
                         encode_needed = True
-                        maybe_blur_still_needed = False
                 elif self.resize_mode in (ResizeMode.border, ResizeMode.keep_ratio_largest):
                     downscale = max(original_width, original_height) > self.image_size
                     if not self.resize_only_if_bigger or downscale:
                         interpolation = self.downscale_interpolation if downscale else self.upscale_interpolation
                         img = A.longest_max_size(img, self.image_size, interpolation=interpolation)
-                        if blurring_bbox_list is not None and self.blurrer is not None:
-                            img = self.blurrer(img=img, bbox_list=blurring_bbox_list)
+                        if cropping_bbox_list is not None and self.cropper is not None:
+                            img = self.cropper(img=img, bbox_list=cropping_bbox_list)
                         if self.resize_mode == ResizeMode.border:
                             img = A.pad(
                                 img,
@@ -202,11 +198,6 @@ class Resizer:
                                 value=[255, 255, 255],
                             )
                         encode_needed = True
-                        maybe_blur_still_needed = False
-
-                # blur parts of the image if needed
-                if maybe_blur_still_needed and blurring_bbox_list is not None and self.blurrer is not None:
-                    img = self.blurrer(img=img, bbox_list=blurring_bbox_list)
 
                 height, width = img.shape[:2]
                 if encode_needed:

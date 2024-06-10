@@ -6,6 +6,7 @@ import logging
 from .logger import LoggerProcess
 from .resizer import Resizer
 from .blurrer import BoundingBoxBlurrer
+from .cropper import BoundingBoxCropper
 from .writer import (
     WebDatasetSampleWriter,
     FilesSampleWriter,
@@ -209,7 +210,7 @@ def download(
         raise ValueError(f"Invalid output format {output_format}")
 
     if bbox_col is not None:
-        blurrer = BoundingBoxBlurrer()
+        cropper = BoundingBoxCropper()
     else:
         blurrer = None
 
@@ -226,7 +227,7 @@ def download(
         min_image_size=min_image_size,
         max_image_area=max_image_area,
         max_aspect_ratio=max_aspect_ratio,
-        blurrer=blurrer,
+        cropper=cropper
     )
 
     downloader = Downloader(
@@ -246,7 +247,7 @@ def download(
         retries=retries,
         user_agent_token=user_agent_token,
         disallowed_header_directives=disallowed_header_directives,
-        blurring_bbox_col=bbox_col,
+        cropping_bbox_col=bbox_col,
     )
 
     print("Starting the downloading of this file")

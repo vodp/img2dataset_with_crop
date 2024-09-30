@@ -212,7 +212,7 @@ def download(
     if bbox_col is not None:
         cropper = BoundingBoxCropper()
     else:
-        blurrer = None
+        cropper = None
 
     resizer = Resizer(
         image_size=image_size,

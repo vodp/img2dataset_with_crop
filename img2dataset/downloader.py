@@ -97,6 +97,7 @@ class Downloader:
         user_agent_token,
         disallowed_header_directives,
         cropping_bbox_col=None,
+        use_thumbnail: bool = True,
     ) -> None:
         self.sample_writer_class = sample_writer_class
         self.resizer = resizer
@@ -119,6 +120,7 @@ class Downloader:
             else {directive.strip().lower() for directive in disallowed_header_directives}
         )
         self.cropping_bbox_col = cropping_bbox_col
+        self.use_thumbnail = use_thumbnail
 
     def __call__(
         self,
@@ -177,7 +179,10 @@ class Downloader:
             self.column_list.index(self.verify_hash_type) if self.verify_hash_type in self.column_list else None
         )
         bbox_indice = self.column_list.index(self.cropping_bbox_col) if self.cropping_bbox_col is not None else None
-        key_url_list = [(key, x[url_indice]) for key, x in shard_to_dl]
+        if self.use_thumbnail:
+            key_url_list = [(key, f'{x[url_indice]}.400') for key, x in shard_to_dl]
+        else:
+            key_url_list = [(key, x[url_indice]) for key, x in shard_to_dl]
 
         # this prevents an accumulation of more than twice the number of threads in sample ready to resize
         # limit the memory usage
